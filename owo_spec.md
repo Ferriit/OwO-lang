@@ -40,6 +40,7 @@ This can then be expanded to:
 4. loop - An infinite loop that loops between the following squiggly brackets. (`loop {}` is the same as `while (true) {}`)
 5. brk - Breaks out of a loop. The same as `break` in most languages
 6. jump - The same as `goto`. Jumps to a specified label
+8. imp - Import an OwOVM library or another OwO script either by its path or by looking in PATH. It's indicated the same way as in C with <> and ""
 
 
 ## Variables:
@@ -135,3 +136,8 @@ for (int i = 0; i < 10; i++) {
 ## Arithmetic, Comparisons and Logical stuff:
 - +, -, \*, /, >>, <<, |, &, !, ||, &&, ==, !=, <=, >=, < and > work the exact same as in C
 - ++, --, +=, -=, \*= and /= also work the exact same as in C
+
+## Including / Importing:
+- To include a C header file from PATH you can do `imp <header_name.h>`. If you want to include from local path or absolute path you can do `imp "header_name.h"`
+- To include an OwOVM library file from PATH you can do `imp <library_name.owol>`. If you want to include by local or absolute path you can do `imp "library_name.owol"`
+- To include another OwO script from PATH you can do `imp <script_name.owo>`. If you want to include by local or absolute path you can do `imp "script_name.owo"`
