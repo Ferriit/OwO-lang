@@ -35,7 +35,11 @@ This can then be expanded to:
 
 ## Keywords:
 1. mem - "Memory location of ...". Assigns new memory for a constant and returns a pointer to said constant. If used on a variable (`mem x`), it's the same as `\*x` in C (pointer)
-2. ref - "Value at the memory location ...". The same as a dereferencing a pointer (`&x`).
+2. ref - "Value at the memory location ...". The same as a dereferencing a pointer (`&x`). **Always preceeds mem**
+3. ret - Returns the following value from a function
+4. loop - An infinite loop that loops between the following squiggly brackets. (`loop {}` is the same as `while (true) {}`)
+5. brk - Breaks out of a loop. The same as `break` in most languages
+6. jump - The same as `goto`. Jumps to a specified label
 
 
 ## Variables:
@@ -55,6 +59,9 @@ This can then be expanded to:
 #### Multi-value:
 - All such variables are arrays (including strings)
 
+##### Referencing:
+- Referencing works exactly the same as it does in C with the square brackets.
+
 ### Variable declaration:
 - To declare a variable x equal to any singular value (char, bool, int), you do `x := [value]` without the square braces
 - To declare a variable y equal to a string, array or a pointer, you do `y := mem [value]` without the square braces. y is now equal to a pointer pointing to the memory location of the value or variable that substitues [value]
@@ -68,3 +75,63 @@ This can then be expanded to:
 ### Specific symbols:
 - Symbols such as "\*" and "&" have been chosen to be removed from the language in favor of "mem" and "ref" due to attaching symbols to variable names being unintuitive
 - Symbols such as """, "'" and "[]" have been kept as they symbolize important distinctions between variable types
+
+## Functions:
+
+- All functions are defined in the same way no matter the intended return type.
+ `[function name] [args] {}`
+Example:
+- main argc argv {}
+
+- Return is written as `ret [value]`. If no return has been triggered, it falls back to returning the constant 0
+
+- Functions that aren't used to get a value can be written without parenthesis
+Example:
+- `printf "Hello, World!"`
+
+- If a function is called to get a value, parenthesis are necessary to distinguish between different cases that look the same without them
+Example:
+- `x := f(z) + y`
+
+## Flow-Control
+- if, else if (elif) and else work exactly the same way they do in other languages. They just have different names
+- `if ([condition]) {}` turns into `[condition] -> {}`
+- `else if ([condition]) {}` turns into `[condition] !->`
+- `else {}` turns into `!-> {}`
+Example:
+```owo
+x := 2;
+
+x == 0 -> {
+    printf "Zero";
+} 
+x == 1 !-> {
+    printf "One";
+} 
+!-> {
+    printf "Other";
+}
+```
+
+## Loops and Loop Control:
+- There's only one type of loop, which is `loop {}`. It's exactly the same as `while (true)`
+- To get out of a loop once you're done, you can do `break;`
+Example:
+```owo
+i := 0;
+loop {
+    printf "%d" i;
+    i++;
+    i == 10 -> {brk;}
+}
+```
+*(C equivalent)*
+```c
+for (int i = 0; i < 10; i++) {
+    printf("%d", i);
+}
+```
+
+## Arithmetic, Comparisons and Logical stuff:
+- +, -, \*, /, >>, <<, |, &, !, ||, &&, ==, !=, <=, >=, < and > work the exact same as in C
+- ++, --, +=, -=, \*= and /= also work the exact same as in C
