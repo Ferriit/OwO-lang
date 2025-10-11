@@ -52,11 +52,19 @@ This can then be expanded to:
 
 - Floats are assigned as "float" and not "int" (meaning you can't do int = float or vice-versa). But the float type doesn't exist when -fmbyas is on. That's because that architecture doesn't support floating-point operations
 
+#### Multi-value:
+- All such variables are arrays (including strings)
+
 ### Variable declaration:
 - To declare a variable x equal to any singular value (char, bool, int), you do `x := [value]` without the square braces
 - To declare a variable y equal to a string, array or a pointer, you do `y := mem [value]` without the square braces. y is now equal to a pointer pointing to the memory location of the value or variable that substitues [value]
+- To declare a variable z equal to the value that a variable or value is pointing to you do `z := mem ref [value]`
 
 ### Variable assignment:
 - To assign a variable x of a singular value (char, bool, int) to another value you do `x = [value]`
 - To assign a variable y to the RAM location of x you do `y = mem x`
 - To assign a variable z to the value that x is pointing to you do `z = mem ref x`. This dereferences x and sets z equal to its location
+
+### Specific symbols:
+- Symbols such as "\*" and "&" have been chosen to be removed from the language in favor of "mem" and "ref" due to attaching symbols to variable names being unintuitive
+- Symbols such as """, "'" and "[]" have been kept as they symbolize important distinctions between variable types
