@@ -1,4 +1,4 @@
-imp <stdio.h>
+imp <stdio.h>;
 
 main argc (mem mem argv) {
     argc < 2 -> {

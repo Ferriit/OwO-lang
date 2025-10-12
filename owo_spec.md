@@ -7,12 +7,12 @@ OwO-Lang is build on a set of core ideas:
 
 This can then be expanded to:
 
-1. All types are fundamentally 16, 32 or 64-bit ints, there's no type-checking 
-2. It builds on pattern-finding (if (x == 2) {} becomes x == 2 -> {}) 
-3. Function calls don't require parenthesis (printf("Hello, World!") becomes printf "Hello, World!". But int x = y + f(z) becomes x := y + f(z) since the parenthesis are needed for clarity) 
-4. The language is fully-procedural like C 
+1. All types are fundamentally 16, 32 or 64-bit ints, there's no type-checking
+2. It builds on pattern-finding (if (x == 2) {} becomes x == 2 -> {})
+3. Function calls don't require parenthesis (printf("Hello, World!") becomes printf "Hello, World!". But int x = y + f(z) becomes x := y + f(z) since the parenthesis are needed for clarity)
+4. The language is fully-procedural like C
 5. It compiles to an intermediary language before that gets compiled to assembly and gets assembled and linked or compiled to the OwOVM.
-6. Variable definition doesn't need a special keyword since every variable is an int (except for strings and arrays, both of which are pointers). You just use := instead of = 
+6. Variable definition doesn't need a special keyword since every variable is an int (except for strings and arrays, both of which are pointers). You just use := instead of =
 7. Functions are defined without a keyword (int main(int argc, char** argv) {} becomes main argc argv {})
 8. Assigning pointers shouldn't be with "\*x", it should use a keyword such as "mem" instead of "\*". (&x becomes ref x)
 
@@ -106,10 +106,10 @@ x := 2;
 
 x == 0 -> {
     printf "Zero";
-} 
+}
 x == 1 !-> {
     printf "One";
-} 
+}
 !-> {
     printf "Other";
 }
