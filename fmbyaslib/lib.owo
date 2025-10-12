@@ -1,0 +1,39 @@
+// This is the OwO-Lang FMBYAS Standard Library
+
+// For more information on registers, refer to this link: https://github.com/Ferriit/EzCPU/blob/dev/FMBYAS_spec.md#registers
+// For more information on Opcodes, refer to this link: https://github.com/Ferriit/EzCPU/blob/dev/FMBYAS_spec.md#opcodes
+
+mac r0 r0; // General purpose registers r0 - r7. Refrain from using registers r9 - r14
+mac r1 r1;
+mac r2 r2;
+mac r3 r3;
+mac r4 r4;
+mac r5 r5;
+mac r6 r6;
+mac r7 r7;
+
+// r8 is meant for use of the standard library while r9 - r14 are meant for the compiler to reference in the generated assembly code
+
+mac r15 io0; // IO Registers io0 - io7. io0 is for data read or to be written to a harddrive. io1 contains flags for the data. Refer to this link for more information: https://github.com/Ferriit/EzCPU/blob/dev/FMBYAS_spec.md#registers
+mac r16 io1;
+mac r17 io2;
+mac r18 io3;
+mac r19 io4;
+mac r20 io5;
+mac r21 io6;
+mac r22 io7;
+
+mac r23 pc; // Program counter
+mac r24 stackptr; // Stack pointer
+mac r25 funcret; // Function return
+mac r26 cmpreg; // Compare result register. Refer to this link for values: https://github.com/Ferriit/EzCPU/blob/dev/FMBYAS_spec.md#registers
+mac r27 dbg; // Register used for debug values
+
+loadreg reg (mem value) { // Load a value from RAM (pointer) into a register
+        asm ld value r8; // Load the value the pointer is pointing to into register r8 (dereference it to a known register)
+        asm mov r8 reg; // Move the value into the specified register
+}
+
+movreg reg (mem variable) { // Move a register's value into a RAM location using a pointer
+    asm str reg variable;
+}
