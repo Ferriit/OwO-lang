@@ -1,0 +1,11 @@
+imp <stdio.h>;
+
+main {
+    i := 0;
+    loop {
+        printf "%d" i;
+        i++;
+    }
+    printf "Done!";
+    ret 0;
+}

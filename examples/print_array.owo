@@ -1,0 +1,12 @@
+imp <stdio.h>
+
+main {
+    array := [0, 1, 2, 11, 5];
+    i := 0;
+    loop {
+        printf "%d" array[i];
+        i++;
+    }
+    
+    ret 0;
+}

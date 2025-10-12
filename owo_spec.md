@@ -41,7 +41,8 @@ This can then be expanded to:
 5. brk - Breaks out of a loop. The same as `break` in most languages
 6. jump - The same as `goto`. Jumps to a specified label
 8. imp - Import an OwOVM library or another OwO script either by its path or by looking in PATH. It's indicated the same way as in C with <> and ""
-
+9. asm - Insert an assembly instruction here. `asm opcode arg1 arg2 arg3 ... argn`. Works on every build target except `-vm`/OwOVM
+10. mac - Replace every instance of the first value with the second value. `mac [value] [what to replace with]`. It does a search-and-replace throughout the entire source code, except for strings
 
 ## Variables:
 
@@ -147,6 +148,16 @@ for (int i = 0; i < 10; i++) {
 Example:
 ```owo
 //This is a comment
+```
+
+## Macros:
+- Macros are replaced literally wherever they appear in the source code after their definition.
+Example:
+```owo
+mac [value] [replace with];
+```
+```owo
+mac WIDTH 10;
 ```
 
 ## Build-target differences:

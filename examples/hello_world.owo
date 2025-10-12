@@ -1,0 +1,6 @@
+imp <stdio.h>;
+
+main {
+    printf "Hello, World!";
+    ret 0;
+}

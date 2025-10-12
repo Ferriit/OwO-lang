@@ -1,0 +1,23 @@
+imp <stdio.h>;
+
+f n {
+    n < 1 -> {
+        printf "Argument n must be larger than zero. Setting n to 1";
+        n = 1;
+    }
+
+    n == 1 || n == 2 -> {
+        ret 1;
+    }
+    !-> {
+        ret f(n - 1) + f(n - 2);
+    }
+}
+
+main {
+    num := 0;
+    printf "Type a number: ";
+    scanf "%d" (mem num);
+
+    printf "%d" f(num);
+}

@@ -1,0 +1,18 @@
+imp <stdio.h>
+
+main argc (mem mem argv) {
+    argc < 2 -> {
+        printf "\n";
+    }
+    !-> {
+        i := 1;
+        loop {
+            printf "%s " argv[i];
+            i++;
+            i == argc -> {brk;}
+        }
+    }
+    printf "\n";
+
+    ret 0;
+}
