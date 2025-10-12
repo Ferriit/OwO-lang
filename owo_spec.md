@@ -116,7 +116,7 @@ x == 1 !-> {
 
 ## Loops and Loop Control:
 - There's only one type of loop, which is `loop {}`. It's exactly the same as `while (true)`
-- To get out of a loop once you're done, you can do `break;`
+- To get out of a loop once you're done, you can do `brk;`
 Example:
 ```owo
 i := 0;
@@ -141,3 +141,28 @@ for (int i = 0; i < 10; i++) {
 - To include a C header file from PATH you can do `imp <header_name.h>`. If you want to include from local path or absolute path you can do `imp "header_name.h"`
 - To include an OwOVM library file from PATH you can do `imp <library_name.owol>`. If you want to include by local or absolute path you can do `imp "library_name.owol"`
 - To include another OwO script from PATH you can do `imp <script_name.owo>`. If you want to include by local or absolute path you can do `imp "script_name.owo"`
+
+## Comments:
+- OwO-Lang only supports single-line comments with double slash `//`
+Example:
+```owo
+//This is a comment
+```
+
+## Build-target differences:
+- `-compat` and (default) transpile to C first before invoking your system compiler. If you're planning to interface with C libraries, it's best to use -compat to make sure you're not passing 64 bit integers to 32 bit functions
+- `-vm` compiles to OwOVM bytecode that can use OwOVM libraries
+- `-fmbyas` compiles directly to FMBYAS assembly that can be assembled by the [EzCPU](https://github.com/Ferriit/EzCPU/tree/dev) assembler
+
+### Standard libraries:
+- `-compat` and `(default)` rely on the C standard library for heavy lifting
+- `-vm` relies on the OwOVM standard library with the same functions as the C standard library
+- `-fmbyas` uses the fmbylib standard library. It only includes the `loadreg reg_code value` and `movreg(reg_code, value)` for loading values into registers and moving values from registers to variables and macros for the available registers (r0 - r7, io0 - io7, dbg, pc, stackptr, cmpreg and funcret).
+
+- Every compilation target except `-vm` has access to the keyword `asm opcode arg1 arg2 arg3 [all args necessary]`, which inserts an assembly instruction with that opcode and those arguments
+
+### Limitations:
+- `(default)`: Transpiles to 64-bit C code.
+- `-compat`: Transpiles to 32-bit C code. Necessary when working with 3rd-party C code, which usually runs on 32-bit or when compiling for older hardware.
+- `-vm`: Compiles to OwOVM bytecode which runs on the OwOVM Virtual Machine. Doesn't support the `asm` keyword.
+- `-fmbyas`: Compiles to 16-bit FMBYAS assembly. Necessary when compiling for EzCPU or SimpleCPU. Cannot interact with either C code or OwOVM. Doesn't support floating-point numbers out of the box.
