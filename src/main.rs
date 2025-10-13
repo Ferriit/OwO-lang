@@ -16,7 +16,7 @@ enum Token {
     BraceOpen,
     BraceClose,
     SquareOpen,
-    SquareClose
+    SquareClose,
 }
 
 fn tokenize(code: &str) -> Vec<Token> {
