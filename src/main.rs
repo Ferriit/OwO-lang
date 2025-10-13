@@ -8,13 +8,15 @@ enum Token {
     Operation(String),
     StringLiteral(String),
     Symbol(char),
+    Char(char),
     Number(String),
     SemiColon,
     ParenOpen,
     ParenClose,
     BraceOpen,
     BraceClose,
-    Array(String),
+    SquareOpen,
+    SquareClose
 }
 
 fn tokenize(code: &str) -> Vec<Token> {
@@ -33,6 +35,9 @@ fn tokenize(code: &str) -> Vec<Token> {
             '}' => tokens.push(Token::BraceClose),
             ';' => tokens.push(Token::SemiColon),
 
+            '[' => tokens.push(Token::SquareOpen),
+            ']' => tokens.push(Token::SquareClose),
+
             '"' => {
                 i += 1;
                 c = chars[i];
@@ -43,6 +48,11 @@ fn tokenize(code: &str) -> Vec<Token> {
                     c = chars[i];
                 }
                 tokens.push(Token::StringLiteral(string_literal));
+            }
+
+            '\'' => {
+                tokens.push(Token::Char(chars[i + 1]));
+                i += 1;
             }
 
             '<' => {
