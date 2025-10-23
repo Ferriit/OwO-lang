@@ -228,191 +228,265 @@ fn clean_code(code_raw: String) -> String {
     processed_code
 }
 
-fn generate_c_target(tokens: Vec<Token>, double: bool) -> String {
-    let mut code = String::new();
+fn generate_asm_target(tokens: Vec<Token>, double: bool) -> String {
+    let mut asm = String::new();
     let mut i = 0;
 
-    let int_type = if double { "int64_t" } else { "int32_t" };
+    let reg_size = if double { 8 } else { 4 };
+    let mut stack_offset: i32 = 0;
+    let mut var_stack_offsets = std::collections::HashMap::new();
+
+    let mut label_counter = 0;
+    let mut loop_stack: Vec<(String, String)> = Vec::new(); // (loop_start, loop_end)
+    let mut if_stack: Vec<String> = Vec::new(); // store endif labels for nested ifs
 
     while i < tokens.len() {
         match &tokens[i] {
             Token::Identifier(name) => {
-                if name == "imp" {
-                    // Handle includes
-                    if let Some(Token::Identifier(header)) = tokens.get(i + 1) {
-                        code += &format!("#include {}\n", header);
+                match name.as_str() {
+                    "ret" => {
+                        if let Some(next) = tokens.get(i + 1) {
+                            match next {
+                                Token::Number(n) => asm += &format!("    mov rax, {}\n", n),
+                                Token::Identifier(id) => {
+                                    if let Some(off) = var_stack_offsets.get(id) {
+                                        asm += &format!("    mov rax, [rbp{}]\n", off);
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                        asm += "    leave\n    ret\n";
                         i += 2;
                         continue;
                     }
-                } else if name == "ret" {
-                    // Handle return
-                    if let Some(next) = tokens.get(i + 1) {
-                        let ret_val = match next {
-                            Token::Number(n) => n.clone(),
-                            Token::Identifier(id) => id.clone(),
-                            Token::StringLiteral(s) => format!("\"{}\"", s),
-                            _ => "0".to_string(),
-                        };
-                        code += &format!("return {};\n", ret_val);
-                        i += 2;
+
+                    "mem" => {
+                        if let Some(Token::Identifier(var)) = tokens.get(i + 1) {
+                            stack_offset -= reg_size;
+                            var_stack_offsets.insert(var.clone(), stack_offset);
+                            if let Some(Token::Number(n)) = tokens.get(i + 2) {
+                                asm += &format!(
+                                    "    mov rax, {}\n    mov [rbp{}], rax\n",
+                                    n, stack_offset
+                                );
+                                i += 1;
+                            }
+                            i += 2;
+                            continue;
+                        }
+                    }
+
+                    "ref" => {
+                        if let Some(Token::Identifier(var)) = tokens.get(i + 1) {
+                            if let Some(off) = var_stack_offsets.get(var) {
+                                asm += &format!("    mov rax, [rbp{}]\n", off);
+                            }
+                            i += 2;
+                            continue;
+                        }
+                    }
+
+                    "loop" => {
+                        let start_label = format!(".loop_start{}", label_counter);
+                        let end_label = format!(".loop_end{}", label_counter);
+                        label_counter += 1;
+                        loop_stack.push((start_label.clone(), end_label.clone()));
+                        asm += &format!("{}:\n", start_label);
+                        i += 1;
                         continue;
                     }
-                } else {
-                    // Check for function definitions: name arg1 arg2 { ...
-                    let mut j = i + 1;
-                    let mut args = Vec::new();
-                    while let Some(Token::Identifier(arg)) = tokens.get(j) {
-                        args.push(format!("{} {}", int_type, arg));
-                        j += 1;
+
+                    "brk" => {
+                        if let Some((_, end_label)) = loop_stack.last() {
+                            asm += &format!("    jmp {}\n", end_label);
+                        }
+                        i += 1;
+                        continue;
                     }
-                    if let Some(Token::BraceOpen) = tokens.get(j) {
-                        code += &format!("{} {}({}) {{\n", int_type, name, args.join(", "));
+
+                    "jump" => {
+                        if let Some(Token::Identifier(label)) = tokens.get(i + 1) {
+                            asm += &format!("    jmp {}\n", label);
+                            i += 2;
+                            continue;
+                        }
+                    }
+
+                    "imp" => {
+                        if let Some(Token::Identifier(path)) = tokens.get(i + 1) {
+                            asm += &format!("    ; import {}\n", path);
+                            i += 2;
+                            continue;
+                        }
+                    }
+
+                    "asm" => {
+                        // Insert raw assembly until semicolon
+                        let mut j = i + 1;
+                        while let Some(tok) = tokens.get(j) {
+                            match tok {
+                                Token::SemiColon => break,
+                                Token::Identifier(s) | Token::Number(s) => {
+                                    asm += &format!("{} ", s)
+                                }
+                                _ => {}
+                            }
+                            j += 1;
+                        }
+                        asm += "\n";
                         i = j + 1;
                         continue;
                     }
 
-                    // Check for variable declaration: x := value
-                    if let Some(Token::Operation(op)) = tokens.get(i + 1) {
-                        if op == ":=" {
-                            if let Some(value_token) = tokens.get(i + 2) {
-                                let value_str = match value_token {
-                                    Token::Number(n) => n.clone(),
-                                    Token::Identifier(id) => id.clone(),
-                                    Token::StringLiteral(s) => format!("\"{}\"", s),
-                                    _ => "0".to_string(),
-                                };
-                                code += &format!("{} {} = {};\n", int_type, name, value_str);
-                                i += 3;
-                                continue;
-                            }
+                    _ => {
+                        // Function definitions
+                        let mut args = Vec::new();
+                        let mut j = i + 1;
+                        while let Some(Token::Identifier(arg)) = tokens.get(j) {
+                            args.push(arg.clone());
+                            j += 1;
                         }
-                    }
-
-                    // Function calls
-                    if let Some(Token::ParenOpen) = tokens.get(i + 1) {
-                        code += &format!("{}(", name);
-                        i += 2;
-                        let mut first = true;
-                        while let Some(tok) = tokens.get(i) {
-                            match tok {
-                                Token::ParenClose => {
-                                    code += ");\n";
-                                    i += 1;
-                                    break;
-                                }
-                                Token::Identifier(id) if id == "mem" || id == "ref" => {
-                                    if let Some(Token::Identifier(var)) = tokens.get(i + 1) {
-                                        if !first {
-                                            code += ", ";
-                                        }
-                                        let s = if id == "mem" {
-                                            format!("&{}", var)
-                                        } else {
-                                            format!("*{}", var)
-                                        };
-                                        code += &s;
-                                        first = false;
-                                        i += 2;
-                                        continue;
-                                    }
-                                }
-                                Token::Identifier(id) => {
-                                    if !first {
-                                        code += ", ";
-                                    }
-                                    code += id;
-                                    first = false;
-                                    i += 1;
-                                }
-                                Token::Number(n) => {
-                                    if !first {
-                                        code += ", ";
-                                    }
-                                    code += n;
-                                    first = false;
-                                    i += 1;
-                                }
-                                Token::StringLiteral(s) => {
-                                    if !first {
-                                        code += ", ";
-                                    }
-                                    code += &format!("\"{}\"", s);
-                                    first = false;
-                                    i += 1;
-                                }
-                                _ => {
-                                    i += 1;
-                                }
+                        if let Some(Token::BraceOpen) = tokens.get(j) {
+                            asm += &format!("{}:\n    push rbp\n    mov rbp, rsp\n", name);
+                            stack_offset = 0;
+                            for arg in &args {
+                                stack_offset -= reg_size;
+                                var_stack_offsets.insert(arg.clone(), stack_offset);
+                                asm += &format!("    ; arg {} at [rbp{}]\n", arg, stack_offset);
                             }
-                        }
-                        continue;
-                    }
-                }
-            }
-
-            Token::Operation(op) if op == "->" => {
-                // if statement
-                if i > 0 {
-                    let cond = &tokens[i - 1];
-                    let cond_str = match cond {
-                        Token::Identifier(id) | Token::Number(id) => id.clone(),
-                        _ => "".to_string(),
-                    };
-                    code += &format!("if ({}) {{\n", cond_str);
-                } else {
-                    code += "{\n";
-                }
-            }
-
-            Token::Operation(op) if op == "!->" => {
-                // else if or else
-                if let Some(Token::Identifier(_)) = tokens.get(i + 1) {
-                    if let Some(Token::Operation(arrow)) = tokens.get(i + 2) {
-                        if arrow == "->" {
-                            // else if
-                            let mut cond_tokens = Vec::new();
-                            let mut k = i + 1;
-                            while let Some(tok) = tokens.get(k) {
-                                if let Token::Operation(op) = tok {
-                                    if op == "->" {
-                                        break;
-                                    }
-                                }
-                                cond_tokens.push(tok.clone());
-                                k += 1;
-                            }
-                            let cond_str = cond_tokens
-                                .iter()
-                                .map(|t| match t {
-                                    Token::Identifier(id) | Token::Number(id) => id.clone(),
-                                    Token::Operation(op) => op.clone(),
-                                    _ => "".to_string(),
-                                })
-                                .collect::<Vec<_>>()
-                                .join(" ");
-                            code += &format!("else if ({}) {{\n", cond_str);
-                            i += cond_tokens.len() + 2;
+                            i = j + 1;
                             continue;
                         }
                     }
                 }
-                // else
-                code += "else {\n";
             }
 
-            Token::BraceOpen => code += "{\n",
-            Token::BraceClose => code += "}\n",
-            Token::Number(n) => code += n,
-            Token::StringLiteral(s) => code += &format!("\"{}\"", s),
-            Token::Char(c) => code += &format!("'{}'", c),
-            Token::SemiColon => code += ";\n",
+            Token::Operation(op) => {
+                match op.as_str() {
+                    "+" | "-" | "*" | "/" => {
+                        if i > 0 && i + 1 < tokens.len() {
+                            let lhs = &tokens[i - 1];
+                            let rhs = &tokens[i + 1];
+                            let lhs_offset = if let Token::Identifier(id) = lhs {
+                                var_stack_offsets.get(id).copied()
+                            } else {
+                                None
+                            };
+                            // Load lhs
+                            if let Some(off) = lhs_offset {
+                                asm += &format!("    mov rax, [rbp{}]\n", off);
+                            } else if let Token::Number(n) = lhs {
+                                asm += &format!("    mov rax, {}\n", n);
+                            }
+                            // Load rhs and operate
+                            if let Token::Identifier(id) = rhs {
+                                if let Some(off) = var_stack_offsets.get(id) {
+                                    asm += &format!("    mov rbx, [rbp{}]\n", off);
+                                }
+                            } else if let Token::Number(n) = rhs {
+                                asm += &format!("    mov rbx, {}\n", n);
+                            }
+                            let instr = match op.as_str() {
+                                "+" => "add rax, rbx",
+                                "-" => "sub rax, rbx",
+                                "*" => "imul rax, rbx",
+                                "/" => "cqo\n    idiv rbx",
+                                _ => "",
+                            };
+                            asm += &format!("    {}\n", instr);
+                            // Store result back if lhs is a variable
+                            if let Some(off) = lhs_offset {
+                                asm += &format!("    mov [rbp{}], rax\n", off);
+                            }
+                            i += 2;
+                            continue;
+                        }
+                    }
+
+                    "==" | "!=" | "<" | ">" | "<=" | ">=" => {
+                        if i > 0 && i + 1 < tokens.len() {
+                            let lhs = &tokens[i - 1];
+                            let rhs = &tokens[i + 1];
+                            let lhs_val = if let Token::Identifier(id) = lhs {
+                                var_stack_offsets.get(id).copied()
+                            } else {
+                                None
+                            };
+                            if let Some(off) = lhs_val {
+                                asm += &format!("    mov rax, [rbp{}]\n", off);
+                            }
+                            let rhs_val = if let Token::Identifier(id) = rhs {
+                                var_stack_offsets.get(id).copied()
+                            } else {
+                                None
+                            };
+                            if let Some(off) = rhs_val {
+                                asm += &format!("    mov rbx, [rbp{}]\n", off);
+                            }
+                            let instr = match op.as_str() {
+                                "==" => "cmp rax, rbx\n    sete al\n    movzx rax, al",
+                                "!=" => "cmp rax, rbx\n    setne al\n    movzx rax, al",
+                                "<" => "cmp rax, rbx\n    setl al\n    movzx rax, al",
+                                ">" => "cmp rax, rbx\n    setg al\n    movzx rax, al",
+                                "<=" => "cmp rax, rbx\n    setle al\n    movzx rax, al",
+                                ">=" => "cmp rax, rbx\n    setge al\n    movzx rax, al",
+                                _ => "",
+                            };
+                            asm += &format!("    {}\n", instr);
+                            i += 2;
+                            continue;
+                        }
+                    }
+
+                    "->" => {
+                        // if statement
+                        let label_id = label_counter;
+                        label_counter += 1;
+                        let end_label = format!(".if_end{}", label_id);
+                        if_stack.push(end_label.clone());
+                        asm += &format!("    cmp rax, 0\n    je {}\n", end_label);
+                    }
+
+                    "!->" => {
+                        // else: jump to end of previous if
+                        if let Some(end_label) = if_stack.pop() {
+                            asm += &format!("    jmp {}\n", end_label);
+                        }
+                    }
+
+                    _ => {}
+                }
+            }
+
+            Token::BraceClose => {
+                // Close loops or if statements
+                if let Some((_, end_label)) = loop_stack.pop() {
+                    asm += &format!("{}:\n", end_label);
+                }
+                if let Some(end_label) = if_stack.pop() {
+                    asm += &format!("{}:\n", end_label);
+                }
+            }
+
+            Token::Number(n) => {
+                asm += &format!("    mov rax, {}\n", n);
+            }
+
+            Token::StringLiteral(s) => {
+                // Strings: reserve static label
+                let label = format!(".str{}", label_counter);
+                label_counter += 1;
+                asm += &format!("{}: db '{}', 0\n", label, s);
+            }
+
             _ => {}
         }
 
         i += 1;
     }
 
-    code
+    asm
 }
 
 fn parse(code_raw: String, args: Vec<String>) -> String {
@@ -422,11 +496,11 @@ fn parse(code_raw: String, args: Vec<String>) -> String {
     println!("{:?}", tokens);
 
     if args.contains(&"-compat".to_string()) {
-        return generate_c_target(tokens.clone(), false);
+        return generate_asm_target(tokens.clone(), false);
     } else if args.contains(&"-fmbyas".to_string()) {
         println!("Build target -FMBYAS not implemented yet");
     } else {
-        return generate_c_target(tokens.clone(), true);
+        return generate_asm_target(tokens.clone(), true);
     }
 
     cleaned
